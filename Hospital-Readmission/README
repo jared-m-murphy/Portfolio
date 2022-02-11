@@ -1,0 +1,8 @@
+Introduction
+Patient recidivism in hospitals can present a high expense. If likely readmission could be detected early, 
+medical staff can take the necessary measures to prevent a patient from needing to be readmitted to inpatient care. 
+While inpatient care can be quite expensive, outpatient care can be quite cheap in comparison. It is in the best 
+interest of a hospital to minimize patient early recidivism rate as much as possible so they can stay within budget 
+and allocate precious resources most effectively. To do this, a model that can accurately predict if a patient is 
+likely to be readmitted in under 30 days would be most helpful. This analysis attempts to create that model based 
+on the UCI dataset found here https://archive-beta.ics.uci.edu/ml/datasets/diabetes+130+us+hospitals+for+years+1999+2008
