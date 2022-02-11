@@ -1,0 +1,6 @@
+You can run this script in terminal. 
+Download all the packages listed at the top of the script and run with python 3.
+This is a preliminary investigation on the creation of 
+multivariate normal distributions of MNIST data to sample from in 
+the context of self organizing maps.  This will hopefully help with 
+catastophic forgetting in Neural Networks. 
