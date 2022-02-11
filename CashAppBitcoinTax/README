@@ -1,0 +1,4 @@
+Working on crating a simple script to process Cash App tax documents.  
+It works, but I want to move everything into functions and have it run 
+through the terminal.  
+After finishing cash app I will then move onto Coinbase and Coinbase Pro.
