@@ -1,0 +1,601 @@
+---
+title: "Analysis of Stroke Prdiction Dataset"
+subtitle: "Author: Jared Murphy"
+format: pdf
+editor: visual
+---
+
+## Introduction
+
+The data set being used is titled "Stroke Prediction Dataset" and it was obtained from the URL <https://www.kaggle.com/datasets/fedesoriano/stroke-prediction-dataset>.  This data set was released by McKinsey and Company for a hack-a-thon in 2018.  It has since been used for several studies, two of which can be found on both Science Direct (<https://www.sciencedirect.com/science/article/pii/S2772442522000090?via%3Dihub#fn3>) and the NIH websites ([https://www.ncbi.nlm.nih.gov/pmc/articles/PMC8641997](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC8641997/)/).  The veracity of the data has been confirmed beyond a reasonable doubt.
+
+## Pre-processing
+
+### Data Import
+
+```{r}
+df_stroke <- read.csv("~/Desktop/healthcare-dataset-stroke-data.csv")
+str(df_stroke)
+```
+
+### Data Cleaning
+
+```{r}
+suppressPackageStartupMessages(library(dplyr))
+df_stroke$id <- NULL
+df_stroke <- df_stroke |>
+  filter(gender != "Other") 
+df_stroke$gender <- as.factor(df_stroke$gender)
+df_stroke$hypertension <- as.factor(df_stroke$hypertension)
+levels(df_stroke$hypertension) <- c("No", "Yes")
+df_stroke$heart_disease <- as.factor(df_stroke$heart_disease)
+levels(df_stroke$heart_disease) <- c("No", "Yes")
+df_stroke$ever_married <- as.factor(df_stroke$ever_married)
+df_stroke$work_type <- as.factor(df_stroke$work_type)
+levels(df_stroke$work_type) <- c("Children", "Govt", "Never", "Private", "Self")
+df_stroke$Residence_type <- as.factor(df_stroke$Residence_type)
+df_stroke <- df_stroke |>
+  filter(bmi != "N/A") 
+df_stroke$bmi <- as.numeric(df_stroke$bmi)
+df_stroke$smoking_status <- factor(df_stroke$smoking_status)
+levels(df_stroke$smoking_status) = c("Unknown", "Former", "Never", "Smokes")
+df_stroke$stroke <- as.factor(df_stroke$stroke)
+levels(df_stroke$stroke) <- c("No", "Yes")
+str(df_stroke)
+
+```
+
+### Summary Statistics
+
+```{r}
+factor_summary <- function(Factors, title, color, las_value = 1, make_mean = TRUE){
+  counts <- table(Factors)
+  if (make_mean == TRUE){
+    MEAN <- mean(as.numeric(Factors))
+  } else {
+    MEAN <- "N/A"
+  }
+  mean_mode <- data.frame(MEAN = MEAN, MODE = names(which.max(counts)))
+  barplot(counts, col = color, main = title, ylab = "Frequency", las = las_value)
+  str(Factors)
+  return(list(counts,mean_mode))
+}
+
+numeric_summary <- function(column, title, color) {
+  str(column)
+  summary(column)
+  boxplot(column, 
+        main = title, 
+        ylab = "Values", 
+        col = color) 
+  return(summary(column))
+}
+```
+
+#### Gender
+
+```{r}
+x <- factor_summary(df_stroke$gender, "Gender", "red")
+x[[1]]
+x[[2]]
+```
+
+#### 
+
+#### Age
+
+```{r}
+numeric_summary(df_stroke$age, "Age", "orange")
+```
+
+#### Hypertension
+
+```{r}
+x <- factor_summary(df_stroke$hypertension, "Hypertension", "yellow")
+x[[1]]
+x[[2]]
+```
+
+#### Heart Disease
+
+```{r}
+x <- factor_summary(df_stroke$heart_disease, "Heart Disease", "green")
+x[[1]]
+x[[2]]
+```
+
+#### Ever Married
+
+```{r}
+x <- factor_summary(df_stroke$ever_married, "Ever Married", "green")
+x[[1]]
+x[[2]]
+```
+
+#### Work Type
+
+```{r}
+x <- factor_summary(df_stroke$work_type, "Work Type", "blue",2, FALSE)
+x[[1]]
+x[[2]]
+```
+
+#### Residence Type
+
+```{r}
+x <- factor_summary(df_stroke$Residence_type, "Residence Type", "violet")
+x[[1]]
+x[[2]]
+```
+
+#### Average Glucose Level
+
+```{r}
+numeric_summary(df_stroke$age, "Avg Glucose Level", "pink")
+```
+
+#### BMI
+
+```{r}
+numeric_summary(df_stroke$bmi, "BMI", "grey")
+```
+
+#### Smoking Status
+
+```{r}
+x <- factor_summary(df_stroke$smoking_status, "Smoking Status", "beige", 2, FALSE )
+x[[1]]
+x[[2]]
+```
+
+#### Stroke
+
+```{r}
+x <- factor_summary(df_stroke$stroke, "Stroke", "black")
+x[[1]]
+x[[2]]
+```
+
+## One Sample Hypothesis Test: BMI
+
+The CDC stated in a National Health and Nutrition Examination Survey, found at URL https://www.cdc.gov/nchs/data/nhanes/databriefs/adultweight.pdf, that "The percent of persons who are overweight or obese, with a BMI of 25.0 or higher, increased from 56 percent in 1988 94 to 64 percent in 1999 2000." The stroke prediction data set that we are analyzing was released in 2018, and we can assume it was collected sometime near the date of its release. Let us test whether the proportion of adults ages 20 and older with a BMI of 25.0 or higher is greater than the 1999-2000 proportion of 64 percent.
+
+1.  Claim: circa 2018, the proportion of adults ages 20 and older with a bmi above 25.0 is greater than .64
+2.  Parameter of interest: p = the proportion of adults with a bmi above 25
+3.  Ho: p \<= .64, Ha: p \> .64
+4.  alpha = .01 (medical)
+5.  X-squared = 345.87 (see below)
+6.  p-value \< .0001 (see below)
+7.  Reject Ho
+8.  At the .01 level of support, there is sufficient evidence to claim that circa 2018 the true proportion of adults with bmi greater than 25 was greater than 64%. This suggests that the proportion of overweight or obese adults has risen since the 1999 2000 measurements.
+
+```{r}
+po <- .64
+n <- df_stroke |> 
+  filter(age >= 20) |>
+  summarise(count = n())
+n <- n[1,1]
+x <- df_stroke |> 
+  filter(age >= 20 & bmi > 25.0) |>
+  summarise(count = n())
+x <- x[1,1]
+result <- prop.test(x, n, p = po, alternative = "greater", conf.level = .99, correct = FALSE)
+result
+
+```
+
+## Two Sample Hypothesis Test: BMI - Urban vs. Rural
+
+Our data set is split between urban and rural residents. Given that sample sizes are large, CLT applies and we can assume normality. Given that this data set was collected by a reputable source, we can assume independence within and between groups. Below the group sample standard deviations can be seen to be approximately equal.
+
+1.  Claim: The average bmi among rural residents is not equal to that of urban residents
+2.  Parameter of interest: Mu_rural - Mu_urban
+3.  Ho: Mu_rural - Mu_urban = 0, Ha: Mu_rural - Mu_urban != 0
+4.  alpha = .01 (medical)
+5.  t = .020551 (see below)
+6.  p-value = .9836 (see below)
+7.  Fail to Reject Ho
+8.  At the .01 level of support, there is insufficient evidence to support the claim that bmi is different between urban and rural residents
+
+```{r}
+urban <- df_stroke |> 
+  filter(Residence_type == "Urban")
+rural <- df_stroke |>
+  filter(Residence_type == "Rural")
+paste("urban bmi std dev:", sd(urban$bmi))
+paste("rural bmi std dev:", sd(rural$bmi))
+t.test(rural$bmi, urban$bmi, mu=0, paired=FALSE, var.equal=TRUE, conf.level=0.99)
+```
+
+## Multivariate Regression Analysis: bmi
+
+### Assumptions
+
+#### Multicollinearity 
+
+After each model is created and fitted, we will measure the Variance Inflation Factor to see if multicollinearity is a problem. If a predictor VIF is above 4 we will remove it.
+
+#### Homoscedasticity
+
+After each model is created and fitted, we will visually inspect each the fitted values vs. residual plots. If any funnel shapes, curvatures or other patterns are present we will reevaluate the model.
+
+#### Residuals Normally Distributed  
+
+After each model is created and fitted, we will visually analyze a residual histogram to make sure that residuals approximate a bell shaped curve.
+
+### Full Model
+
+```{r}
+full_model_formula <- as.formula("bmi ~ gender + age + hypertension + heart_disease + ever_married + work_type + Residence_type + avg_glucose_level + smoking_status + stroke")
+print(full_model_formula)
+full_model <- lm(full_model_formula, data = df_stroke)
+summary(full_model)
+suppressPackageStartupMessages(library(car))
+vif(full_model)
+plot(full_model)
+hist(full_model$residuals)
+
+```
+
+The VIF for each variable is below our stated threshold indicating that muticollinearity between independent variables is likely not an issue. The residual plots do not show much of a discernible pattern. There is no funnel shape or curvature. Heteroskedasticity does not appear to be a problem. Several outliers are likely present and could be skewing results. The residual histogram appears to be skewed to the right and is not quite bell shaped. Lets prune the model by eliminating independent variables with insignificant t-tests before interpreting coefficients. We will interpret coefficients in our pruned models.
+
+### Pruned Model 1
+
+```{r}
+pruned_model1_formula <- as.formula("bmi ~ age + hypertension + ever_married + work_type + avg_glucose_level + smoking_status")
+print(pruned_model1_formula)
+pruned_model1 <- lm(pruned_model1_formula, data = df_stroke)
+summary(pruned_model1)
+vif(pruned_model1)
+plot(pruned_model1)
+hist(pruned_model1$residuals)
+```
+
+The same situation as before can be described regarding assumptions. There are clearly outliers present when examining the residual plots. Lets eliminate all observations greater than Q3 + 1.5 \* IQR, and all observations less than Q1 - 1.5 \* IQR with respect to continuous independent variables age, avg_glucose_level, and bmi.
+
+```{r}
+outlier_range <- function(column){
+  x <- length(column) * .25
+  y <- length(column) *.75
+  Q1 <- sort(column)[x]
+  Q3 <- sort(column)[y]
+  IQR <- Q3 - Q1
+  lower <- Q1 - 1.5 * IQR
+  upper <- Q3 + 1.5 * IQR
+  return (c(lower,upper))
+}
+age_range <- outlier_range(df_stroke$age)
+df_stroke_no_outlier <- df_stroke |> 
+  filter(age > age_range[1] & age < age_range[2])
+glucose_range <- outlier_range(df_stroke$avg_glucose_level)
+df_stroke_no_outlier <- df_stroke_no_outlier |>
+  filter(avg_glucose_level > glucose_range[1] & avg_glucose_level < glucose_range[2])
+bmi_range <- outlier_range(df_stroke$bmi)
+df_stroke_no_outlier <- df_stroke_no_outlier |>
+  filter(bmi > bmi_range[1] & bmi < bmi_range[2])
+```
+
+### Pruned Model 1 No Outliers
+
+```{r}
+pruned_model2_formula <- as.formula("bmi ~ age + hypertension + ever_married + work_type + avg_glucose_level + smoking_status")
+print(pruned_model2_formula)
+pruned_model2 <- lm(pruned_model2_formula, 
+                    data = df_stroke_no_outlier)
+summary(pruned_model2)
+vif(pruned_model2)
+plot(pruned_model2)
+hist(pruned_model2$residuals)
+```
+
+The situation is the same as before regarding assumptions. Multicollinearity does not appear to be present and heteroskedasticity is likely not a problem. The residual plot is skewed right, and this problem should be investigated further. The adjusted R-squared has increased from .2372 in the first pruned model to .2707 in the second. While this is an improvement, this model still does not carry much explanatory power. Below are explanations of the significant coefficients.
+
+[Significant Coefficients]{.underline}
+
+1.  hypertensionYes - when a subject goes from not having hypertension to having hypertension, on average their bmi increases 2.1757 points, provided all other explanatory variables remain constant
+2.  ever_marriedYes - when a subject goes from being never married to currently or formerly married, on average their bmi increases 1.7902 points, provided all other explanatory variables remain constant
+3.  work_typeGovt - when a subject goes from being a full time parent to doing government work, on average their bmi increases 7.6893 points, provided all other explanatory variables remain constant
+4.  work_typeNever - when a subject goes from being a full time parent to having never worked, on average their bmi increases 5.3099 points, provided all other explanatory variables remain constant
+5.  work_typePrivate - when a subject goes from being a full time parent to doing private work, on average their bmi increases 7.4207 points, provided all other explanatory variables remain constant
+6.  work_typeSelf - when a subject goes from being a full time parent to being self-employed, on average their bmi increases 7.176 points, provided all other explanatory variables remain constant
+7.  smoking_statusSmokes - when a subjects smoking status goes from unknown to smoking, on average bmi decreases .7622 points, provided all other explanatory variables remain constant
+
+### Pruned Model 2 No Outliers
+
+```{r}
+print(as.formula("bmi ~ ever_married + work_type"))
+pruned_model3 <- lm(bmi ~ ever_married + work_type, 
+                    data = df_stroke_no_outlier)
+summary(pruned_model3)
+vif(pruned_model3)
+plot(pruned_model3)
+hist(pruned_model3$residuals)
+```
+
+Residual patterns can be seen to form four distinct groups and show approximately even spread around a mean of zero. The Q-Q residual plot shows the straightest line yet, and the residual histogram has become less skewed to the right, better approximating a bell shaped curve. Assumptions do not appear to be violated in a meaningful way. Below are explanations for significant coefficients.
+
+[Significant Coefficients]{.underline}
+
+1.  ever_marriedYes - when a subject goes from being never married to currently or formerly married, on average their bmi increases 1.9555 points, provided all other explanatory variables remain constant
+2.  work_typeGovt - when a subject goes from being a full time parent to doing government work, on average their bmi increases 8.0869 points, provided all other explanatory variables remain constant
+3.  work_typeNever - when a subject goes from being a full time parent to having never worked, on average their bmi increases 5.5355 points, provided all other explanatory variables remain constant
+4.  work_typePrivate - when a subject goes from being a full time parent to doing private work, on average their bmi increases 7.7976 points, provided all other explanatory variables remain constant
+5.  work_typeSelf - when a subject goes from being a full time parent to being self-employed, on average their bmi increases 7.6408 points, provided all other explanatory variables remain constant
+
+Eliminating smoking_status, hypertension, and avg_glucose level from the model decreased the adjusted R-squared, but not by much. The final pruned model may be the best due to the fact that not much more explanatory power is gained by adding in extra independent variables.
+
+### Interpretation 
+
+While the best performing multivariate regression models had little ability to explain the variation in bmi, it is still worth commenting on some of the discoveries made so that future studies can be better informed. The strongest associations between predictor and response were found in marital history and work type. This is interesting because these are not what one would normally think of as medical factors. On the contrary, these factors fall squarely within the behavioral category. This investigation has highlighted the need for medical questionnaires to inqure about aspects of a patients life that may seem wholly unrelated to the the diagnosis at hand. It also bears mentioning that a currently or previously married full time parent scores on average much less on the bmi scale than all other groups. Because so many health issues are linked with being overweight or obese, it appears that married full time parents are one of the healthiest groups of people, despite all the stress of raising children.
+
+## Logistic Regression Analysis - stroke
+
+### Full Model
+
+```{r warning = FALSE}
+glm_stroke_formula <- as.formula("stroke ~ gender + age + hypertension + heart_disease + ever_married + work_type + Residence_type + avg_glucose_level + smoking_status + bmi")
+print(glm_stroke_formula)
+glm_stroke <- glm(glm_stroke_formula, 
+                  family = "binomial", 
+                  data = df_stroke_no_outlier)
+summary(glm_stroke)
+suppressPackageStartupMessages(library(pROC))
+auc(glm_stroke$y, glm_stroke$fitted.values)
+```
+
+Most of the parameter estimates for the above model have insignificant p-values. The area under the ROC curve is quite good, but lets prune the model and see if the AIC goes down without doing much to anything else.
+
+### Pruned Model
+
+```{r}
+print(as.formula("stroke ~ age + hypertension"))
+glm_stroke_pruned <- glm(stroke ~ age + hypertension, 
+                         family = "binomial", 
+                         data = df_stroke_no_outlier)
+summary(glm_stroke_pruned)
+exp(cbind(OR = coef(glm_stroke_pruned), 
+          confint(glm_stroke_pruned)))
+auc(glm_stroke_pruned$y, glm_stroke_pruned$fitted.values)
+```
+
+This pruned model has a lower AIC which indicates that the balance between complexity and explanatory power is better with this model. The area under the ROC curve remaines relatively unchanged. The pruned model classifies nearly just as good without the added complexity. Below are the odds-ratio interpretations for the pruned model parameter estimates.
+
+[Odds-Ratio Interperetations]{.underline}
+
+exp(age) - for every one unit increase in age the odds ratio for stroke goes up by a factor of 1.0725, provided all other explanatory variables remain constant
+
+exp(hypertensionYes) - when hypertension is changed from baseline No to Yes, the odds ratio for stroke increases by a factor of 1.8784, provided all other explanatory variables remain constant.
+
+### Post-Estimation
+
+```{r}
+my_row <- df_stroke[72,]
+predictions <- predict(glm_stroke_pruned, my_row, type="response") 
+predictions
+```
+
+## Automation
+
+### Data Cleaning
+
+```{r}
+df_stroke_clean <- function(df_stroke) {
+  suppressPackageStartupMessages(library(dplyr))
+  df_stroke$id <- NULL
+  df_stroke <- df_stroke |>
+    filter(gender != "Other") 
+  df_stroke$gender <- as.factor(df_stroke$gender)
+  df_stroke$hypertension <- as.factor(df_stroke$hypertension)
+  levels(df_stroke$hypertension) <- c("No", "Yes")
+  df_stroke$heart_disease <- as.factor(df_stroke$heart_disease)
+  levels(df_stroke$heart_disease) <- c("No", "Yes")
+  df_stroke$ever_married <- as.factor(df_stroke$ever_married)
+  df_stroke$work_type <- as.factor(df_stroke$work_type)
+  levels(df_stroke$work_type) <- c("Children", "Govt", "Never", "Private", "Self")
+  df_stroke$Residence_type <- as.factor(df_stroke$Residence_type)
+  df_stroke <- df_stroke |>
+    filter(bmi != "N/A") 
+  df_stroke$bmi <- as.numeric(df_stroke$bmi)
+  df_stroke$smoking_status <- factor(df_stroke$smoking_status)
+  levels(df_stroke$smoking_status) = c("Unknown", "Former", "Never", "Smokes")
+  df_stroke$stroke <- as.factor(df_stroke$stroke)
+  levels(df_stroke$stroke) <- c("No", "Yes")
+  return(df_stroke)
+}
+```
+
+### Summary Statistics
+
+```{r}
+factor_summary <- function(Factors, title, color = "black", las_value = 1, make_mean = TRUE){
+  counts <- table(Factors)
+  if (make_mean == TRUE){
+    MEAN <- mean(as.numeric(Factors))
+  } else {
+    MEAN <- "N/A"
+  }
+  mean_mode <- data.frame(MEAN = MEAN, MODE = names(which.max(counts)))
+  column_plot <- barplot(counts, col = color, main = title, ylab = "Frequency", las = las_value)
+  return(list(counts = counts, mean_mode = mean_mode, column_plot = column_plot))
+}
+
+numeric_summary <- function(column, title, color) {
+  column_summary <- summary(column)
+  column_box <- boxplot(column, 
+                  main = title, 
+                  ylab = "Values", 
+                  col = color) 
+  return(list(summary = column_summary, plot = column_box)) 
+}
+
+column_summary <- function(df_stroke_column) {
+  if (is.numeric(df_stroke_column)) {
+    numeric_summary(df_stroke_column)
+  } else if (is.factor(df_stroke_column)) {
+    num_levels <- nlevels(df_stroke_column)
+    full_name <- deparse(substitute(df_stroke_column))
+    column_name <- gsub(".*\\$", "", full_name)
+    if(num_levels > 2) {
+      factor_summary(df_stroke_column, title = column_name, las_value = 2, make_mean = FALSE)
+    } else {
+      factor_summary(df_stroke_column, title = column_name)
+    }
+  } 
+}
+
+df_summary <- function(df) {
+  my_list <- list()
+  for (col_name in names(df)) {
+    my_list[[col_name]] <- column_summary(df$col_name)
+  }
+  return (my_list)
+}
+```
+
+### One Sample Hypothesis Test: bmi
+
+```{r}
+proportions_test_upper <- function(df, greater_than_age, greater_than_bmi, p0) {
+  po <- p0
+  n <- df |> 
+    filter(age >= greater_than_age) |>
+    summarise(count = n())
+  n <- n[1,1]
+  x <- df |> 
+    filter(age >= greater_than_age & bmi > greater_than_bmi) |>
+    summarise(count = n())
+  x <- x[1,1]
+  result <- prop.test(x, n, p = po, alternative = "greater", conf.level = .99, correct = FALSE)
+  return (result)
+}
+```
+
+### Two Sample Hypothesis Test: bmi
+
+```{r}
+two_sample_test_bmi <- function(df,column){
+  if (!is.factor(column)) {
+    stop("COLUMN MUST BE FACTOR!!")
+  }
+  if (nlevels(column) > 2) {
+    stop("COLUMN CAN ONLY HAVE TWO LEVELS!!")
+  }
+  full_name <- deparse(substitute(column))
+  column_name <- gsub(".*\\$", "", full_name)
+  column_sym <- sym(column_name)
+  x <- df |> 
+    filter(!!column_sym == levels(column)[1])
+  y <- df |>
+    filter(!!column_sym == levels(column)[2])
+    test <- t.test(x$bmi, y$bmi, mu=0, paired=FALSE, var.equal=TRUE, conf.level=0.99)
+    return(test)
+}
+```
+
+### Outlier Reduction
+
+```{r}
+outlier_range <- function(column){
+  x <- length(column) * .25
+  y <- length(column) *.75
+  Q1 <- sort(column)[x]
+  Q3 <- sort(column)[y]
+  IQR <- Q3 - Q1
+  lower <- Q1 - 1.5 * IQR
+  upper <- Q3 + 1.5 * IQR
+  return (c(lower,upper))
+}
+df_no_outliers <- function(df_stroke) {
+  age_range <- outlier_range(df_stroke$age)
+  df_stroke_no_outlier <- df_stroke |> 
+    filter(age > age_range[1] & age < age_range[2])
+  glucose_range <- outlier_range(df_stroke$avg_glucose_level)
+  df_stroke_no_outlier <- df_stroke_no_outlier |>
+    filter(avg_glucose_level > glucose_range[1] &      avg_glucose_level < glucose_range[2])
+  bmi_range <- outlier_range(df_stroke$bmi)
+  df_stroke_no_outlier <- df_stroke_no_outlier |>
+    filter(bmi > bmi_range[1] & bmi < bmi_range[2])
+  return(df_stroke_no_outlier)
+}
+```
+
+### Multivariate Regression Analysis
+
+```{r}
+multi_regression <- function(model_formula, df){
+  suppressPackageStartupMessages(library(car))
+  x <- lm(model_formula, data = df)
+  my_list <- list()
+  my_list[["summary"]] <- summary(x)
+  my_list[["vif"]] <- vif(x)
+  plot(x)
+  hist(x$residuals)
+  return (my_list)
+}
+```
+
+### Logistic Regression
+
+```{r warning = FALSE}
+logi_regression <- function(model_formula, df) {
+  x <- glm(model_formula, family = "binomial", data = df)
+  my_list <- list()
+  my_list[["summary"]] <- summary(x)
+  odds_ratios <- exp(cbind(OR = coef(x), 
+          confint(x)))
+  my_list[["odds_ratios"]] <- odds_ratios
+  suppressPackageStartupMessages(library(pROC))
+  my_list[["auc"]] <- auc(x$y, x$fitted.values)
+  my_row <- df[sample(1:nrow(df),1),]
+  predictions <- predict(x, my_row, type="response") 
+  my_list[["predicion"]] <- predictions
+  return(my_list)
+}
+```
+
+### Automated Pipeline
+
+```{r warning = FALSE}
+#import data
+df_stroke <- read.csv("~/Desktop/healthcare-dataset-stroke-data.csv")
+
+#clean data
+df_stroke <- df_stroke_clean(df_stroke)
+
+#get summary statistics and charts
+df_summary <- df_summary(df_stroke)
+
+#one sample hypothesis test
+results_one_sample <- proportions_test_upper(df_stroke,20,25,.64)
+
+#two sample hypothesis test
+results_two_sample <- two_sample_test_bmi(df_stroke, df_stroke$Residence_type)
+
+#remove outliers
+df_stroke <- df_no_outliers(df_stroke)
+  
+#multivariate regression
+multi_model1 <- as.formula("bmi ~ gender + age + hypertension + heart_disease + ever_married + work_type + Residence_type + avg_glucose_level + smoking_status + stroke")
+multi_model2 <- as.formula("bmi ~ age + hypertension + ever_married + work_type + avg_glucose_level + smoking_status")
+multi_model3 <- as.formula("bmi ~ ever_married + work_type")
+multi_model_list1 <- list(multi_model1, multi_model2, multi_model3)
+multi_model_list2 <- list()
+for (i in 1:length(multi_model_list1)) {
+    multi_model_list2[[i]] <- multi_regression(multi_model_list1[[i]],df_stroke)
+    print(multi_model_list1[[i]])
+    print(multi_model_list2[[i]][1])
+    print(multi_model_list2[[i]][2])
+}
+
+#logistic regression
+logi_model1 <- as.formula("stroke ~ gender + age + hypertension + heart_disease + ever_married + work_type + Residence_type + avg_glucose_level + smoking_status + bmi")
+logi_model2 <- as.formula("stroke ~ age + hypertension")
+logi_model_list1 <- list(logi_model1, logi_model2)
+logi_model_list2 <- list()
+for (i in 1:length(logi_model_list1)) {
+    logi_model_list2[[i]] <- logi_regression(logi_model_list1[[i]],df_stroke)
+    print(logi_model_list1[[i]])
+    print(logi_model_list2[[i]])
+}
+
+```
